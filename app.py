@@ -1,120 +1,148 @@
 import streamlit as st
+import numpy as np
 import pandas as pd
 import joblib
+from streamlit_option_menu import option_menu
 
+# Load trained model, scaler, and encoder
+model = joblib.load("house_price_xgboost.pkl")
+scaler = joblib.load("scaler.pkl")  
+encoder = joblib.load("encoder.pkl")
 
+# Load expected feature names from training
+expected_features = list(scaler.feature_names_in_)
+
+# Streamlit UI Configuration
+st.set_page_config(page_title="🏡 House Price Prediction", layout="wide")
+
+# Sidebar navigation
+with st.sidebar:
+    selected = option_menu(
+        menu_title="🏠 House Price Predictor",
+        options=["Home", "Predict"],
+        icons=["house", "graph-up"],
+        menu_icon="cast",
+        default_index=0,
+    )
+
+# Home Page
+# Apply custom CSS for background GIF
 st.markdown(
     """
     <style>
-    body {
-        background-color: #0e1117;
-        color: white;
-        font-family: 'Arial', sans-serif;
-    }
-    .stButton>button {
-        background: linear-gradient(145deg, #1e2229, #292e36);
-        border-radius: 12px;
-        padding: 10px 20px;
-        border: 1px solid #2c313a;
-        color: #fff;
-        font-size: 16px;
-        transition: 0.3s;
-    }
-    .stButton>button:hover {
-        background: linear-gradient(145deg, #292e36, #1e2229);
-        transform: scale(1.05);
-    }
-    .stSelectbox, .stNumberInput {
-        background-color: #1e2229 !important;
-        color: white !important;
-        border-radius: 10px;
-        padding: 8px;
-    }
-    .css-1aumxhk {
-        background-color: #1e2229;
-        border-radius: 12px;
-        padding: 15px;
-        box-shadow: 5px 5px 10px #12161d, -5px -5px 10px #2c313a;
-    }
-    .css-15zrgzn {
-        color: white !important;
-    }
+        body {
+            background: url("https://media3.giphy.com/media/v1.Y2lkPTc5MGI3NjExbDg4dzR6Nzcyb2hwamUxeGhyN2RoMWVmNGpoaXh4cjl3bnY2OG94OCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/x4O0fjpQfoBZS/giphy.gif") no-repeat center center fixed;
+            background-size: cover;
+        }
+        .stApp {
+            background: rgba(0, 0, 0, 0.6);
+            padding: 20px;
+            border-radius: 15px;
+        }
     </style>
     """,
     unsafe_allow_html=True
 )
 
+if selected == "Home":
+    st.title("🏡 AI-Powered House Price Prediction")
+    st.write("Get an accurate estimate of your house value using Machine Learning!")
 
-model_path = "best_model_xgboost.pkl"  # Adjust if inside a folder, e.g., "models/best_model_xgboost.pkl"
-model = joblib.load(model_path)
+    col1, col2 = st.columns([2, 1])
 
+    with col1:
+        st.image("https://source.unsplash.com/featured/?luxury,house", use_column_width=True)
+        st.write("💡 *Enter your property details to predict its price instantly!* 🏠")
+        st.write("🔹 **Advanced AI Model** trained with real estate data")
+        st.write("🔹 **Fast & Accurate** predictions based on key features")
+        st.write("🔹 **User-Friendly** Interface for easy inputs")
 
-feature_names = ['MSSubClass', 'MSZoning', 'LotFrontage', 'LotArea', 'Street', 'Alley', 'LotShape',
-                 'LandContour', 'Utilities', 'LotConfig', 'LandSlope', 'Neighborhood', 'Condition1',
-                 'Condition2', 'BldgType', 'HouseStyle', 'OverallQual', 'OverallCond', 'YearBuilt',
-                 'YearRemodAdd', 'RoofStyle', 'RoofMatl', 'Exterior1st', 'Exterior2nd', 'MasVnrType',
-                 'MasVnrArea', 'ExterQual', 'ExterCond', 'Foundation', 'BsmtQual', 'BsmtCond',
-                 'BsmtExposure', 'BsmtFinType1', 'BsmtFinSF1', 'BsmtFinType2', 'BsmtFinSF2',
-                 'BsmtUnfSF', 'TotalBsmtSF', 'Heating', 'HeatingQC', 'CentralAir', 'Electrical',
-                 '1stFlrSF', '2ndFlrSF', 'LowQualFinSF', 'GrLivArea', 'BsmtFullBath', 'BsmtHalfBath',
-                 'FullBath', 'HalfBath', 'BedroomAbvGr', 'KitchenAbvGr', 'KitchenQual', 'TotRmsAbvGrd',
-                 'Functional', 'Fireplaces', 'FireplaceQu', 'GarageType', 'GarageYrBlt', 'GarageFinish',
-                 'GarageCars', 'GarageArea', 'GarageQual', 'GarageCond', 'PavedDrive', 'WoodDeckSF',
-                 'OpenPorchSF', 'EnclosedPorch', '3SsnPorch', 'ScreenPorch', 'PoolArea', 'PoolQC',
-                 'Fence', 'MiscFeature', 'MiscVal', 'MoSold', 'YrSold', 'SaleType', 'SaleCondition']
+    with col2:
+        st.image("https://media3.giphy.com/media/W1fFapmqgqEf8RJ9TQ/giphy.gif", use_column_width=True)
 
+# Prediction Page
+elif selected == "Predict":
+    st.title("📊 Predict House Price")
+    st.write("Fill in the details below and get an estimated price!")
 
-categorical_cols = ['MSZoning', 'Street', 'LotShape', 'LandContour', 'Utilities', 'BldgType', 
-                    'HouseStyle', 'RoofStyle', 'GarageType', 'PavedDrive']
+    col1, col2 = st.columns(2)
 
+    with col1:
+        lot_area = st.number_input("🏡 Lot Area (sq ft)", min_value=500, format="%d")
+        bedrooms = st.number_input("🛏 Number of Bedrooms", min_value=1, format="%d")
+        bathrooms = st.number_input("🛁 Number of Bathrooms", min_value=1, format="%d")
+        overall_quality = st.slider("🏆 Overall Quality (1-10)", 1, 10, 5)
+        year_built = st.number_input("📅 Year Built", min_value=1900, max_value=2025, format="%d")
+        total_bsmt_sf = st.number_input("🏗 Total Basement Area (sq ft)", min_value=0, format="%d")
+        gr_liv_area = st.number_input("🏠 Above Ground Living Area (sq ft)", min_value=0, format="%d")
 
-categorical_features = {
-    "MSZoning": ["RL", "RM", "C (all)", "FV", "RH"],
-    "Street": ["Paved", "Gravel"],
-    "LotShape": ["Reg", "IR1", "IR2", "IR3"],
-    "LandContour": ["Lvl", "Bnk", "HLS", "Low"],
-    "Utilities": ["AllPub", "NoSeWa"],
-    "BldgType": ["1Fam", "2fmCon", "Duplex", "TwnhsE", "Twnhs"],
-    "HouseStyle": ["1Story", "2Story", "1.5Fin", "1.5Unf", "2.5Fin", "2.5Unf", "SFoyer", "SLvl"],
-    "RoofStyle": ["Gable", "Hip", "Gambrel", "Mansard", "Flat", "Shed"],
-    "GarageType": ["Attchd", "Detchd", "BuiltIn", "CarPort", "Basment", "2Types"],
-    "PavedDrive": ["Y", "N", "P"]
-}
+    with col2:
+        garage_cars = st.number_input("🚗 Garage Cars", min_value=0, max_value=5, format="%d")
+        garage_area = st.number_input("🚘 Garage Area (sq ft)", min_value=0, format="%d")
+        wood_deck_sf = st.number_input("🌳 Wood Deck Area (sq ft)", min_value=0, format="%d")
+        open_porch_sf = st.number_input("🏡 Open Porch Area (sq ft)", min_value=0, format="%d")
+        pool_area = st.number_input("🏊 Pool Area (sq ft)", min_value=0, format="%d")
+        fireplace = st.selectbox("🔥 Has Fireplace?", ["Yes", "No"])
+        neighborhood = st.selectbox("📍 Select Neighborhood", encoder.categories_[0])  
+        house_style = st.selectbox("🏠 Select House Style", encoder.categories_[1])
 
+    if st.button("💰 Predict House Price", use_container_width=True):
+        # Encode categorical data
+        cat_input = pd.DataFrame([[neighborhood, house_style]], columns=["Neighborhood", "HouseStyle"])
+        cat_encoded = encoder.transform(cat_input)
+        cat_encoded_df = pd.DataFrame(cat_encoded, columns=encoder.get_feature_names_out(["Neighborhood", "HouseStyle"]))
 
-st.sidebar.header("🏡 House Features")
-input_data = {}
+        # Encode fireplace manually
+        fireplace_mapping = {"No": 0, "Yes": 1}
+        fireplace_encoded = fireplace_mapping[fireplace]
 
+        # Prepare numerical features
+        num_features_dict = {
+            "LotArea": lot_area,
+            "BedroomAbvGr": bedrooms,
+            "FullBath": bathrooms,
+            "OverallQual": overall_quality,
+            "YearBuilt": year_built,
+            "GarageCars": garage_cars,
+            "TotalBsmtSF": total_bsmt_sf,
+            "Fireplaces": fireplace_encoded,
+            "WoodDeckSF": wood_deck_sf,
+            "OpenPorchSF": open_porch_sf,
+            "PoolArea": pool_area,
+            "GrLivArea": gr_liv_area,
+            "GarageArea": garage_area,
+        }
 
-for feature in feature_names[:15]:  
-    if feature in categorical_features:
-        value = st.sidebar.selectbox(f"{feature}:", categorical_features[feature])
-    else:
-        value = st.sidebar.number_input(f"{feature}:", min_value=0, value=0, step=1)
-    
-    input_data[feature] = value
+        num_features_df = pd.DataFrame([num_features_dict])
 
+        # Combine numerical and encoded categorical features
+        final_features = pd.concat([num_features_df, cat_encoded_df], axis=1)
 
-input_df = pd.DataFrame([input_data])
+        # Add missing features with default value 0
+        for feat in expected_features:
+            if feat not in final_features.columns:
+                final_features[feat] = 0  
 
+        # Drop unnecessary features not in expected_features
+        final_features = final_features[expected_features]
 
-for col in categorical_cols:
-    if col in input_df.columns:
-        input_df[col] = input_df[col].astype('category').cat.codes
+        # ✅ Scale features
+        features_scaled = scaler.transform(final_features)
 
+        # 🎯 Predict
+        prediction = model.predict(features_scaled)
 
-model_features = model.get_booster().feature_names 
-input_df = input_df.reindex(columns=model_features, fill_value=0)  
+        st.success(f"💰 Estimated House Price: ${prediction[0]:,.2f}")
+        st.balloons()
 
-
-if st.button("🔮 Predict House Price"):
-    prediction = model.predict(input_df)[0]
-    st.success(f"🏡 **Estimated House Price: ${prediction:,.2f}**")
-
-
-st.markdown("""
-    <br><br>
-    <div style="text-align: center; font-size: 14px;">
-        Built with ❤️ by Harshit Rai | AI-Powered House Price Predictor
+# Footer
+st.markdown(
+    """
+    <hr style="border: 1px solid #ccc; margin-top: 40px;">
+    <div style="text-align: center; font-size: 16px;">
+        <p>🚀 Built with ❤️ by <b>Harshit Rai</b> using <b>Streamlit</b></p>
+        <p>🔗 Connect with me on <a href="https://github.com/Harshitraiii2005" target="_blank" style="color: #FF5733; text-decoration: none;"><b>GitHub</b></a></p>
     </div>
-    """, unsafe_allow_html=True)
+    """,
+    unsafe_allow_html=True,
+)
